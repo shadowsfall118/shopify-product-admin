@@ -1,0 +1,652 @@
+{{ 'product-admin.css' | asset_url | stylesheet_tag }}
+
+{%- liquid
+  assign required_tag = section.settings.required_tag | strip
+  assign has_access = false
+
+  if customer
+    if required_tag != blank and customer.tags contains required_tag
+      assign has_access = true
+    endif
+  endif
+-%}
+
+<div class="product-admin page-width">
+  {% if has_access %}
+
+    {% paginate collections.all.products by 250 %}
+    <div class="product-admin__header">
+      <div>
+        <p class="product-admin__eyebrow">Products</p>
+        <h1 class="product-admin__title">{{ section.settings.heading | escape }}</h1>
+      </div>
+
+      <div class="product-admin__count">
+        {{ collections.all.products_count }} products
+      </div>
+    </div>
+
+    <div class="product-admin__toolbar">
+      <div class="product-admin__search-wrap">
+        <svg
+          class="product-admin__search-icon"
+          width="18"
+          height="18"
+          viewBox="0 0 20 20"
+          aria-hidden="true"
+        >
+          <circle
+            cx="8.5"
+            cy="8.5"
+            r="5.75"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+          />
+          <path
+            d="M12.8 12.8L17 17"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          />
+        </svg>
+
+        <input
+          id="ProductAdminSearch-{{ section.id }}"
+          class="product-admin__search"
+          type="search"
+          aria-label="Search products, SKU, vendor, or product type"
+          placeholder="Search products or SKU"
+          autocomplete="off"
+        >
+      </div>
+    </div>
+
+    <div class="product-admin__table-wrap">
+      <table class="product-admin__table">
+        <thead>
+  <tr>
+    <th class="product-admin__image-column"></th>
+
+    <th>
+      <button
+        type="button"
+        class="product-admin__sort"
+        data-sort="product"
+      >
+        Product
+        <span class="product-admin__sort-icon" aria-hidden="true">↕</span>
+      </button>
+    </th>
+
+    {% if section.settings.show_sku %}
+      <th>
+        <button
+          type="button"
+          class="product-admin__sort"
+          data-sort="sku"
+        >
+          SKU
+          <span class="product-admin__sort-icon" aria-hidden="true">↕</span>
+        </button>
+      </th>
+    {% endif %}
+
+    {% if section.settings.show_inventory %}
+      <th>
+        <button
+          type="button"
+          class="product-admin__sort"
+          data-sort="inventory"
+        >
+          Inventory
+          <span class="product-admin__sort-icon" aria-hidden="true">↕</span>
+        </button>
+      </th>
+    {% endif %}
+
+    {% if section.settings.show_availability %}
+      <th>
+        <button
+          type="button"
+          class="product-admin__sort"
+          data-sort="availability"
+        >
+          Availability
+          <span class="product-admin__sort-icon" aria-hidden="true">↕</span>
+        </button>
+      </th>
+    {% endif %}
+
+    {% if section.settings.show_vendor %}
+      <th>
+        <button
+          type="button"
+          class="product-admin__sort"
+          data-sort="vendor"
+        >
+          Vendor
+          <span class="product-admin__sort-icon" aria-hidden="true">↕</span>
+        </button>
+      </th>
+    {% endif %}
+
+    {% if section.settings.show_type %}
+      <th>
+        <button
+          type="button"
+          class="product-admin__sort"
+          data-sort="type"
+        >
+          Product type
+          <span class="product-admin__sort-icon" aria-hidden="true">↕</span>
+        </button>
+      </th>
+    {% endif %}
+
+    {% if section.settings.show_price %}
+      <th class="product-admin__align-right">
+        <button
+          type="button"
+          class="product-admin__sort product-admin__sort--right"
+          data-sort="price"
+        >
+          Price
+          <span class="product-admin__sort-icon" aria-hidden="true">↕</span>
+        </button>
+      </th>
+    {% endif %}
+  </tr>
+</thead>
+
+        <tbody id="ProductAdminTable-{{ section.id }}">
+
+
+            {% for product in collections.all.products %}
+              {%- liquid
+                assign total_inventory = 0
+                assign sku_search = ''
+                assign sku_display = ''
+                assign sku_count = 0
+
+                for variant in product.variants
+                  if variant.inventory_quantity != blank
+                    assign total_inventory = total_inventory | plus: variant.inventory_quantity
+                  endif
+
+                  if variant.sku != blank
+                    assign sku_count = sku_count | plus: 1
+
+                    if sku_search == blank
+                      assign sku_search = variant.sku
+                    else
+                      assign sku_search = sku_search | append: ' ' | append: variant.sku
+                    endif
+
+                    if sku_display == blank
+                      assign sku_display = variant.sku
+                    else
+                      assign sku_display = sku_display | append: ', ' | append: variant.sku
+                    endif
+                  endif
+                endfor
+
+                assign admin_product_url = shop.url | append: '/admin/products/' | append: product.id
+              -%}
+
+              <tr
+  class="product-admin__row"
+  data-search="{{ product.title | escape }} {{ sku_search | escape }} {{ product.vendor | escape }} {{ product.type | escape }}"
+  data-id="{{ product.id }}"
+  data-product="{{ product.title | escape }}"
+  data-sku="{{ sku_search | escape }}"
+  data-inventory="{{ total_inventory }}"
+  data-availability="{% if product.available %}available{% else %}sold out{% endif %}"
+  data-vendor="{{ product.vendor | escape }}"
+  data-type="{{ product.type | escape }}"
+  data-price="{{ product.price_min }}"
+>
+                <td class="product-admin__image-cell">
+                  <a
+                    href="{{ admin_product_url }}"
+                    class="product-admin__image-link"
+                    target="_blank"
+                    rel="noopener"
+                    aria-label="Open {{ product.title | escape }} in Shopify Admin"
+                  >
+                    {% if product.featured_image %}
+                      {{
+                        product.featured_image
+                        | image_url: width: 100
+                        | image_tag:
+                          loading: 'lazy',
+                          widths: '50, 75, 100',
+                          class: 'product-admin__image',
+                          alt: product.title
+                      }}
+                    {% else %}
+                      <div class="product-admin__image-placeholder">
+                        {{ 'product-1' | placeholder_svg_tag }}
+                      </div>
+                    {% endif %}
+                  </a>
+                </td>
+
+                <td class="product-admin__product-cell">
+                  <a
+                    href="{{ admin_product_url }}"
+                    class="product-admin__product-link"
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    {{ product.title | escape }}
+                  </a>
+
+                  {% if product.variants.size > 1 %}
+                    <div class="product-admin__variant-count">
+                      {{ product.variants.size }} variants
+                    </div>
+                  {% endif %}
+                </td>
+
+                {% if section.settings.show_sku %}
+                  <td class="product-admin__sku-cell">
+                    {% if sku_count == 0 %}
+
+                      <span class="product-admin__muted">—</span>
+
+                    {% elsif sku_count == 1 %}
+
+                      {{ sku_display | escape }}
+
+                    {% else %}
+
+                      <details class="product-admin__sku-details">
+                        <summary>
+                          {{ sku_count }} SKUs
+                        </summary>
+
+                        <div class="product-admin__sku-list">
+                          {% for variant in product.variants %}
+  {% if variant.sku != blank %}
+    <div class="product-admin__sku-item">
+      <a
+        href="{{ shop.url }}/admin/products/{{ product.id }}/variants/{{ variant.id }}"
+        class="product-admin__variant-link"
+        target="_blank"
+        rel="noopener"
+      >
+        {% if product.variants.size > 1 %}
+          <span class="product-admin__sku-variant">
+            {{ variant.title | escape }}:
+          </span>
+        {% endif %}
+
+        <span class="product-admin__sku-value">
+          {{ variant.sku | escape }}
+        </span>
+      </a>
+    </div>
+  {% endif %}
+{% endfor %}
+                        </div>
+                      </details>
+
+                    {% endif %}
+                  </td>
+                {% endif %}
+
+                {% if section.settings.show_inventory %}
+                  <td>
+                    {{ total_inventory }}
+                  </td>
+                {% endif %}
+
+                {% if section.settings.show_availability %}
+                  <td>
+                    {% if product.available %}
+                      <span class="product-admin__badge product-admin__badge--available">
+                        Available
+                      </span>
+                    {% else %}
+                      <span class="product-admin__badge product-admin__badge--soldout">
+                        Sold out
+                      </span>
+                    {% endif %}
+                  </td>
+                {% endif %}
+
+                {% if section.settings.show_vendor %}
+                  <td>
+                    {% if product.vendor != blank %}
+                      {{ product.vendor | escape }}
+                    {% else %}
+                      <span class="product-admin__muted">—</span>
+                    {% endif %}
+                  </td>
+                {% endif %}
+
+                {% if section.settings.show_type %}
+                  <td>
+                    {% if product.type != blank %}
+                      {{ product.type | escape }}
+                    {% else %}
+                      <span class="product-admin__muted">—</span>
+                    {% endif %}
+                  </td>
+                {% endif %}
+
+                {% if section.settings.show_price %}
+                  <td class="product-admin__align-right">
+                    {% if product.price_varies %}
+                      {{ product.price_min | money }}+
+                    {% else %}
+                      {{ product.price | money }}
+                    {% endif %}
+                  </td>
+                {% endif %}
+              </tr>
+
+            {% endfor %}
+
+
+        </tbody>
+      </table>
+
+      <div
+        id="ProductAdminEmpty-{{ section.id }}"
+        class="product-admin__empty"
+        hidden
+      >
+        No products found.
+      </div>
+    </div>
+
+  <div
+    id="ProductAdminData-{{ section.id }}"
+    data-current-page="{{ paginate.current_page }}"
+    data-page-param="{{ paginate.page_param | escape }}"
+    data-total-pages="{{ paginate.pages }}"
+    data-total-products="{{ paginate.items }}"
+    hidden
+  ></div>
+
+<div
+  id="ProductAdminLoading-{{ section.id }}"
+  class="product-admin__loading" role="status" aria-live="polite"
+>
+  <span id="ProductAdminLoadingText-{{ section.id }}">
+    Loading products...
+  </span>
+</div>
+
+<nav
+  id="ProductAdminPagination-{{ section.id }}"
+  class="product-admin__pagination"
+  aria-label="Product pagination"
+>
+  <div class="product-admin__pagination-side">
+    <button
+      id="ProductAdminPrevious-{{ section.id }}"
+      type="button"
+      class="product-admin__pagination-button"
+      disabled
+    >
+      Previous
+    </button>
+  </div>
+
+  <span
+    id="ProductAdminPaginationStatus-{{ section.id }}"
+    class="product-admin__pagination-status"
+  ></span>
+
+  <div class="product-admin__pagination-side product-admin__pagination-side--right">
+    <button
+      id="ProductAdminNext-{{ section.id }}"
+      type="button"
+      class="product-admin__pagination-button"
+    >
+      Next
+    </button>
+  </div>
+</nav>
+
+<noscript><p>JavaScript is required for search, sorting, and background loading. Browse batches below.</p>{{ paginate | default_pagination }}</noscript>
+{% endpaginate %}
+
+    <script>
+(function () {
+  const sectionId = {{ section.id | json }};
+  function initialize() {
+    const root = document.getElementById('shopify-section-' + sectionId);
+    if (!root) return;
+    const get = (name) => root.querySelector('[id="ProductAdmin' + name + '-' + sectionId + '"]');
+    const table = get('Table'), data = get('Data');
+    if (!table || !data || table.dataset.initialized) return;
+    table.dataset.initialized = 'true';
+    const search = get('Search'), empty = get('Empty');
+    const previous = get('Previous'), next = get('Next'), status = get('PaginationStatus');
+    const loading = get('Loading'), loadingText = get('LoadingText');
+    const buttons = root.querySelectorAll('.product-admin__sort');
+    const pageSize = 50, total = Number(data.dataset.totalProducts);
+    const pageCount = Math.max(1, Math.min(100, Number(data.dataset.totalPages)));
+    const initialPage = Number(data.dataset.currentPage);
+    const rows = new Map();
+    let filtered = [], page = 1, sortKey = 'sku', direction = 1;
+    let finished = false, failed = false;
+    function addRows(items) {
+      items.forEach(row => rows.set(row.dataset.id, row));
+    }
+    addRows(Array.from(table.querySelectorAll('.product-admin__row')));
+    function render() {
+      const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
+      page = Math.max(1, Math.min(page, pages));
+      const start = (page - 1) * pageSize;
+      table.replaceChildren(...filtered.slice(start, start + pageSize));
+      empty.hidden = filtered.length !== 0;
+      empty.textContent = finished ? 'No products found.' : 'No matching products loaded yet. Results may be incomplete.';
+      previous.disabled = page <= 1;
+      next.disabled = page >= pages;
+      status.textContent = filtered.length ? (start + 1) + '–' + Math.min(start + pageSize, filtered.length) + ' of ' + filtered.length : '0 products';
+      if (!finished) status.textContent += ' (loaded results)';
+    }
+    function update(resetPage = false) {
+      if (resetPage) page = 1;
+      const query = search.value.trim().toLowerCase();
+      filtered = Array.from(rows.values()).filter(row => (row.dataset.search || '').toLowerCase().includes(query));
+      if (sortKey) filtered.sort((a, b) => {
+        const av = a.dataset[sortKey] || '', bv = b.dataset[sortKey] || '';
+        const result = ['inventory', 'price'].includes(sortKey)
+          ? Number(av) - Number(bv)
+          : av.localeCompare(bv, undefined, { numeric: true, sensitivity: 'base' });
+        return direction * result;
+      });
+      render();
+    }
+    function progress() {
+      loading.classList.toggle('product-admin__loading--complete', finished);
+      loading.classList.toggle('product-admin__loading--error', failed);
+      loadingText.textContent = failed
+        ? 'Some products could not be loaded. ' + rows.size + ' of ' + total + ' products available. Results are incomplete; reload to retry.'
+        : finished ? rows.size + ' products loaded'
+        : 'Loading products... ' + rows.size + ' of ' + total;
+    }
+    async function fetchPage(number) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('sections');
+      url.searchParams.set(data.dataset.pageParam || 'page', String(number));
+      url.searchParams.set('section_id', sectionId);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+      try {
+        const response = await fetch(url.toString(), { credentials: 'same-origin', signal: controller.signal });
+        if (!response.ok) throw new Error('Product page request failed: ' + response.status);
+        const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+        const fetchedData = doc.getElementById('ProductAdminData-' + sectionId);
+        const fetchedTable = doc.getElementById('ProductAdminTable-' + sectionId);
+        if (!fetchedData || !fetchedTable || Number(fetchedData.dataset.currentPage) !== number) {
+          throw new Error('Access changed or unexpected product page returned.');
+        }
+        const items = Array.from(fetchedTable.querySelectorAll('.product-admin__row'));
+        if (!items.length && total > 0) throw new Error('Empty product batch.');
+        return items;
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+    async function load() {
+      progress();
+      const pending = [];
+      for (let n = 1; n <= pageCount; n++) if (n !== initialPage) pending.push(n);
+      try {
+        // Keep at most two section requests in flight.
+        for (let i = 0; i < pending.length; i += 2) {
+          if (!root.isConnected) return;
+          const results = await Promise.allSettled(pending.slice(i, i + 2).map(fetchPage));
+          results.forEach(result => {
+            if (result.status === 'fulfilled') addRows(result.value);
+            else failed = true;
+          });
+          update();
+          progress();
+          if (failed) break;
+        }
+        if (rows.size !== total || total > 25000) failed = true;
+        finished = !failed;
+      } catch (error) {
+        failed = true;
+        console.error('Product Admin:', error);
+      }
+      update();
+      progress();
+    }
+    search.addEventListener('input', () => update(true));
+    buttons.forEach(button => {
+      const initiallySorted = button.dataset.sort === sortKey;
+      button.closest('th').setAttribute('aria-sort', initiallySorted ? 'ascending' : 'none');
+      button.querySelector('.product-admin__sort-icon').textContent = initiallySorted ? '↑' : '↕';
+      button.addEventListener('click', () => {
+        direction = sortKey === button.dataset.sort ? -direction : 1;
+        sortKey = button.dataset.sort;
+        buttons.forEach(other => {
+          const active = other === button;
+          other.closest('th').setAttribute('aria-sort', active ? (direction === 1 ? 'ascending' : 'descending') : 'none');
+          other.querySelector('.product-admin__sort-icon').textContent = active ? (direction === 1 ? '↑' : '↓') : '↕';
+        });
+        update(true);
+      });
+    });
+    previous.addEventListener('click', () => { page--; render(); });
+    next.addEventListener('click', () => { page++; render(); });
+    update();
+    load();
+  }
+  initialize();
+  // Shopify replaces section HTML in the theme editor without re-running inline scripts.
+  window.productAdminInitializers = window.productAdminInitializers || {};
+  window.productAdminInitializers[sectionId] = initialize;
+  if (!window.productAdminEditorListener) {
+    window.productAdminEditorListener = true;
+    document.addEventListener('shopify:section:load', event => {
+      const initializeSection = window.productAdminInitializers[event.detail.sectionId];
+      if (initializeSection) initializeSection();
+    });
+  }
+})();
+</script>
+
+  {% else %}
+
+    <div class="product-admin__access-denied">
+      {% if customer %}
+
+        <h1>Access restricted</h1>
+
+        <p>
+          Your account does not have permission to view this page.
+        </p>
+
+      {% else %}
+
+        <h1>Sign in required</h1>
+
+        <p>
+          You must be signed in to view this page.
+        </p>
+
+        <a
+          href="{{ routes.account_login_url }}"
+          class="product-admin__login-button"
+        >
+          Sign in
+        </a>
+
+      {% endif %}
+    </div>
+
+  {% endif %}
+</div>
+
+{% schema %}
+{
+  "name": "Product Admin",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Products"
+    },
+    {
+      "type": "text",
+      "id": "required_tag",
+      "label": "Required customer tag",
+      "default": "product-admin",
+      "info": "Only logged-in customers with this exact tag can view the list. A blank tag denies access."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_sku",
+      "label": "Show SKU",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_inventory",
+      "label": "Show inventory",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_availability",
+      "label": "Show availability",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_vendor",
+      "label": "Show vendor",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_type",
+      "label": "Show product type",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_price",
+      "label": "Show price",
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "name": "Product Admin"
+    }
+  ]
+}
+{% endschema %}
