@@ -1,6 +1,6 @@
 # Shopify Product Admin
 
-A customer-tag-restricted storefront product table, assembled from the “Shopify SKU App Creation” conversation. Includes product thumbnails, expandable SKU lists with variant Admin links, optional columns, sortable headers, search, background loading, and 50-row browser pagination. No app installation, API key, or build step is required.
+A customer-tag-restricted storefront product table. Includes product thumbnails, expandable SKU lists with variant Admin links, optional columns, sortable headers, search, background loading, and 50-row browser pagination. No app installation, API key, or build step is required.
 
 ## Preview
 
